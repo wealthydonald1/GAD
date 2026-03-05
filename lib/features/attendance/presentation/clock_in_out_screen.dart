@@ -76,19 +76,15 @@ class _ClockInOutScreenState extends State<ClockInOutScreen> {
             ),
             const SizedBox(height: 24),
 
-            CustomButton(
-              text: isClockedIn ? 'Clock Out' : 'Clock In',
-              icon: Icons.fingerprint,
+            ElevatedButton.icon(
+              icon: const Icon(Icons.fingerprint),
+              label: Text(isClockedIn ? 'Clock Out' : 'Clock In'),
               onPressed: () async {
-                // ✅ This is where biometrics prompt happens (on iOS/Android only)
-                final supported = await _biometrics.canCheck();
-                final ok = supported
-                    ? await _biometrics.authenticate(
-                        reason: isClockedIn ? 'Confirm Clock Out' : 'Confirm Clock In',
-                      )
-                    : true; // fallback (e.g. web / unsupported device)
+                debugPrint('CLOCK BUTTON TAPPED ✅');
 
-                if (!ok) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Clock button tapped ✅')),
+                );
 
                 setState(() {
                   isClockedIn = !isClockedIn;
