@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:gad/shared/widgets/custom_button.dart';
 import 'package:gad/shared/widgets/app_card.dart';
+import 'package:gad/core/services/biometric_service.dart';
 
 class ClockInOutScreen extends StatefulWidget {
   const ClockInOutScreen({Key? key}) : super(key: key);
@@ -10,6 +11,8 @@ class ClockInOutScreen extends StatefulWidget {
 }
 
 class _ClockInOutScreenState extends State<ClockInOutScreen> {
+  final _biometrics = BiometricService();
+
   bool isClockedIn = false;
   String? inTime;
   String? outTime;
@@ -23,16 +26,12 @@ class _ClockInOutScreenState extends State<ClockInOutScreen> {
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
-            // Current time
             Card(
               child: Padding(
                 padding: const EdgeInsets.all(24.0),
                 child: Column(
                   children: [
-                    const Text(
-                      'Current Time',
-                      style: TextStyle(fontSize: 14, color: Colors.grey),
-                    ),
+                    const Text('Current Time', style: TextStyle(fontSize: 14, color: Colors.grey)),
                     const SizedBox(height: 8),
                     Text(
                       TimeOfDay.now().format(context),
@@ -43,7 +42,6 @@ class _ClockInOutScreenState extends State<ClockInOutScreen> {
               ),
             ),
             const SizedBox(height: 16),
-            // Status card
             AppCard(
               child: Column(
                 children: [
@@ -77,11 +75,21 @@ class _ClockInOutScreenState extends State<ClockInOutScreen> {
               ),
             ),
             const SizedBox(height: 24),
-            // Action button
+
             CustomButton(
               text: isClockedIn ? 'Clock Out' : 'Clock In',
-              onPressed: () {
-                // TODO: Add biometric verification
+              icon: Icons.fingerprint,
+              onPressed: () async {
+                // ✅ This is where biometrics prompt happens (on iOS/Android only)
+                final supported = await _biometrics.canCheck();
+                final ok = supported
+                    ? await _biometrics.authenticate(
+                        reason: isClockedIn ? 'Confirm Clock Out' : 'Confirm Clock In',
+                      )
+                    : true; // fallback (e.g. web / unsupported device)
+
+                if (!ok) return;
+
                 setState(() {
                   isClockedIn = !isClockedIn;
                   final now = TimeOfDay.now().format(context);
@@ -92,13 +100,11 @@ class _ClockInOutScreenState extends State<ClockInOutScreen> {
                   }
                 });
               },
-              icon: Icons.fingerprint,
             ),
+
             const SizedBox(height: 16),
             TextButton(
-              onPressed: () {
-                Navigator.pushNamed(context, '/attendance/history');
-              },
+              onPressed: () => Navigator.pushNamed(context, '/attendance/history'),
               child: const Text('View History'),
             ),
           ],

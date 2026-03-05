@@ -7,18 +7,25 @@ void main() {
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({Key? key}) : super(key: key);
+  const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'GAD - Work Management',
       debugShowCheckedModeBanner: false,
+
+      // ✅ LIGHT MODE ONLY for now
       theme: AppTheme.lightTheme(),
-      darkTheme: AppTheme.darkTheme(),
-      themeMode: ThemeMode.system,
-      initialRoute: '/',  // Start at root, which maps to staff dashboard
+      themeMode: ThemeMode.light,
+
+      // If you want routing enabled:
+      initialRoute: '/',
       onGenerateRoute: AppRouter.generateRoute,
+
+      // If you want to bypass routing temporarily, comment the two lines above
+      // and use this:
+      // home: const StaffDashboard(),
     );
   }
 }

@@ -7,6 +7,7 @@ class StaffDashboard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    debugPrint('StaffDashboard build');
     return Scaffold(
       appBar: AppBar(
         title: const Text('Dashboard'),
@@ -23,30 +24,34 @@ class StaffDashboard extends StatelessWidget {
         children: [
           // Quick status card
           AppCard(
-            child: Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: const [
-                      Text(
-                        'You are clocked in',
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      SizedBox(height: 4),
-                      Text('In: 8:30 AM · Out: --:--'),
-                    ],
-                  ),
+          child: Wrap(
+            alignment: WrapAlignment.spaceBetween,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            runSpacing: 12,
+            children: [
+              ConstrainedBox(
+                constraints: const BoxConstraints(minWidth: 220),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: const [
+                    Text(
+                      'You are clocked in',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    SizedBox(height: 4),
+                    Text('In: 8:30 AM · Out: --:--'),
+                  ],
                 ),
-                ElevatedButton(
-                  onPressed: () {
-                    Navigator.pushNamed(context, AppRouter.attendance);
-                  },
-                  child: const Text('Clock Out'),
-                ),
-              ],
-            ),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.pushNamed(context, AppRouter.attendance);
+                },
+                child: const Text('Clock Out'),
+              ),
+            ],
           ),
+        ),
           const SizedBox(height: 16),
           // Stats cards
           Row(

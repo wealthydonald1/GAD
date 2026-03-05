@@ -25,6 +25,7 @@ class AppRouter {
   static const String profile = '/profile';
 
   static Route<dynamic> generateRoute(RouteSettings settings) {
+    debugPrint('Route: ${settings.name}, args: ${settings.arguments}');
     switch (settings.name) {
       case '/':
         // Redirect root to staff dashboard (or login if you prefer)
