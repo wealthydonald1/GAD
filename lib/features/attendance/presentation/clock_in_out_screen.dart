@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:gad/core/services/biometric_service.dart';
 import 'package:gad/shared/widgets/custom_button.dart';
 import 'package:gad/shared/widgets/app_card.dart';
-import 'package:gad/core/services/biometric_service.dart';
 
 class ClockInOutScreen extends StatefulWidget {
   const ClockInOutScreen({Key? key}) : super(key: key);
@@ -18,6 +18,55 @@ class _ClockInOutScreenState extends State<ClockInOutScreen> {
   String? outTime;
   String breakTime = '1 hr';
 
+  bool _busy = false;
+
+  Future<void> _handleClock() async {
+    if (_busy) return;
+
+    setState(() => _busy = true);
+
+    final canAuth = await _biometrics.canCheck();
+    if (!mounted) return;
+
+    if (!canAuth) {
+      // If biometrics not available, still allow action (so the app remains usable)
+      _toggleClock();
+      setState(() => _busy = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Biometrics not available — clock updated')),
+      );
+      return;
+    }
+
+    final ok = await _biometrics.authenticate(
+      reason: isClockedIn ? 'Authenticate to clock out' : 'Authenticate to clock in',
+    );
+
+    if (!mounted) return;
+
+    if (ok) {
+      _toggleClock();
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Authentication cancelled')),
+      );
+    }
+
+    setState(() => _busy = false);
+  }
+
+  void _toggleClock() {
+    setState(() {
+      isClockedIn = !isClockedIn;
+      final now = TimeOfDay.now().format(context);
+      if (isClockedIn) {
+        inTime = now;
+      } else {
+        outTime = now;
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -31,7 +80,10 @@ class _ClockInOutScreenState extends State<ClockInOutScreen> {
                 padding: const EdgeInsets.all(24.0),
                 child: Column(
                   children: [
-                    const Text('Current Time', style: TextStyle(fontSize: 14, color: Colors.grey)),
+                    const Text(
+                      'Current Time',
+                      style: TextStyle(fontSize: 14, color: Colors.grey),
+                    ),
                     const SizedBox(height: 8),
                     Text(
                       TimeOfDay.now().format(context),
@@ -75,29 +127,11 @@ class _ClockInOutScreenState extends State<ClockInOutScreen> {
               ),
             ),
             const SizedBox(height: 24),
-
-            ElevatedButton.icon(
-              icon: const Icon(Icons.fingerprint),
-              label: Text(isClockedIn ? 'Clock Out' : 'Clock In'),
-              onPressed: () async {
-                debugPrint('CLOCK BUTTON TAPPED ✅');
-
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Clock button tapped ✅')),
-                );
-
-                setState(() {
-                  isClockedIn = !isClockedIn;
-                  final now = TimeOfDay.now().format(context);
-                  if (isClockedIn) {
-                    inTime = now;
-                  } else {
-                    outTime = now;
-                  }
-                });
-              },
+            CustomButton(
+              text: _busy ? 'Please wait...' : (isClockedIn ? 'Clock Out' : 'Clock In'),
+              onPressed: _busy ? () {} : _handleClock,
+              icon: Icons.fingerprint,
             ),
-
             const SizedBox(height: 16),
             TextButton(
               onPressed: () => Navigator.pushNamed(context, '/attendance/history'),
