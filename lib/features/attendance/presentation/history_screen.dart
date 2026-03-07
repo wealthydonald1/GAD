@@ -1,17 +1,17 @@
 import 'package:flutter/material.dart';
-import 'package:gad/core/services/attendance_service.dart';
+import '../../../core/services/attendance_service.dart';
+import '../domain/attendance_record.dart';
 
 class HistoryScreen extends StatefulWidget {
-  const HistoryScreen({Key? key}) : super(key: key);
+  const HistoryScreen({super.key});
 
   @override
   State<HistoryScreen> createState() => _HistoryScreenState();
 }
 
 class _HistoryScreenState extends State<HistoryScreen> {
-  final _attendance = AttendanceService();
-  bool _loading = true;
-  List<AttendanceEntry> _history = [];
+  final AttendanceService _service = AttendanceService();
+  List<AttendanceRecord> _history = [];
 
   @override
   void initState() {
@@ -20,11 +20,9 @@ class _HistoryScreenState extends State<HistoryScreen> {
   }
 
   Future<void> _load() async {
-    final list = await _attendance.loadHistory();
-    if (!mounted) return;
+    final data = await _service.getHistory();
     setState(() {
-      _history = list;
-      _loading = false;
+      _history = data;
     });
   }
 
@@ -32,22 +30,22 @@ class _HistoryScreenState extends State<HistoryScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Attendance History')),
-      body: _loading
-          ? const Center(child: CircularProgressIndicator())
-          : (_history.isEmpty
-              ? const Center(child: Text('No history yet'))
-              : ListView.separated(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: _history.length,
-                  separatorBuilder: (_, __) => const Divider(),
-                  itemBuilder: (context, index) {
-                    final item = _history[index];
-                    return ListTile(
-                      title: Text(item.date),
-                      subtitle: Text('${item.inTime} - ${item.outTime}'),
-                    );
-                  },
-                )),
+      body: _history.isEmpty
+          ? const Center(child: Text('No attendance records yet'))
+          : ListView.builder(
+              itemCount: _history.length,
+              itemBuilder: (context, index) {
+                final record = _history[index];
+
+                return ListTile(
+                  leading: const Icon(Icons.calendar_today),
+                  title: Text(record.date),
+                  subtitle: Text(
+                    'In: ${record.clockIn}  |  Out: ${record.clockOut}',
+                  ),
+                );
+              },
+            ),
     );
   }
 }

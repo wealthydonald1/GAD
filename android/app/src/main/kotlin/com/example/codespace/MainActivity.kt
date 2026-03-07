@@ -1,6 +1,5 @@
-package com.example.gad
+package com.example.codespace
 
 import io.flutter.embedding.android.FlutterFragmentActivity
 
-class MainActivity: FlutterFragmentActivity() {
-}
+class MainActivity: FlutterFragmentActivity()

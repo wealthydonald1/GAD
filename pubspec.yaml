@@ -11,6 +11,7 @@ dependencies:
     sdk: flutter
   shared_preferences: ^2.2.3
   local_auth: ^2.2.0
+  geolocator: ^10.1.0
 
   # UI
   percent_indicator: ^4.2.3

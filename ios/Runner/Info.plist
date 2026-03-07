@@ -29,6 +29,8 @@
 	<key>UIApplicationSceneManifest</key>
 	<key>NSFaceIDUsageDescription</key>
 	<string>Use Face ID to confirm attendance actions.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>This app needs location access to verify office attendance</string>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>
 		<false/>
