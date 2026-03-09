@@ -28,8 +28,7 @@ class AppRouter {
     debugPrint('Route: ${settings.name}, args: ${settings.arguments}');
     switch (settings.name) {
       case '/':
-        // Redirect root to staff dashboard (or login if you prefer)
-        return MaterialPageRoute(builder: (_) => const StaffDashboard());
+        return MaterialPageRoute(builder: (_) => const LoginScreen());
       case login:
         return MaterialPageRoute(builder: (_) => const LoginScreen());
       case forgotPassword:

@@ -9,6 +9,18 @@ class AttendanceRecord {
     required this.clockOut,
   });
 
+  AttendanceRecord copyWith({
+    String? date,
+    String? clockIn,
+    String? clockOut,
+  }) {
+    return AttendanceRecord(
+      date: date ?? this.date,
+      clockIn: clockIn ?? this.clockIn,
+      clockOut: clockOut ?? this.clockOut,
+    );
+  }
+
   Map<String, dynamic> toJson() {
     return {
       'date': date,
@@ -19,9 +31,9 @@ class AttendanceRecord {
 
   factory AttendanceRecord.fromJson(Map<String, dynamic> json) {
     return AttendanceRecord(
-      date: json['date'],
-      clockIn: json['clockIn'],
-      clockOut: json['clockOut'],
+      date: json['date'] ?? '',
+      clockIn: json['clockIn'] ?? '--:--',
+      clockOut: json['clockOut'] ?? '--:--',
     );
   }
 }
