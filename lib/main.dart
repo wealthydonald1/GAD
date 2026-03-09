@@ -4,6 +4,7 @@ import 'package:gad/core/services/auth_service.dart';
 import 'package:gad/core/services/biometric_service.dart';
 import 'package:gad/core/theme/app_theme.dart';
 import 'package:gad/features/auth/presentation/login_screen.dart';
+import 'package:gad/features/dashboard/presentation/manager_dashboard.dart';
 import 'package:gad/features/dashboard/presentation/staff_dashboard.dart';
 
 void main() {
@@ -59,12 +60,20 @@ class _AuthGateState extends State<AuthGate> {
       return;
     }
 
+    final role = await _authService.getCurrentRole();
     final biometricEnabled = await _authService.isBiometricEnabled();
+
+    Widget targetScreen;
+    if (role == 'manager') {
+      targetScreen = const ManagerDashboard();
+    } else {
+      targetScreen = const StaffDashboard();
+    }
 
     if (!biometricEnabled) {
       if (!mounted) return;
       setState(() {
-        _screen = const StaffDashboard();
+        _screen = targetScreen;
         _loading = false;
       });
       return;
@@ -75,7 +84,7 @@ class _AuthGateState extends State<AuthGate> {
     if (!canCheck) {
       if (!mounted) return;
       setState(() {
-        _screen = const StaffDashboard();
+        _screen = targetScreen;
         _loading = false;
       });
       return;
@@ -88,7 +97,7 @@ class _AuthGateState extends State<AuthGate> {
     if (!mounted) return;
 
     setState(() {
-      _screen = ok ? const StaffDashboard() : const LoginScreen();
+      _screen = ok ? targetScreen : const LoginScreen();
       _loading = false;
     });
   }

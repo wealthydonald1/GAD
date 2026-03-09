@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:gad/core/router/app_router.dart';
 import 'package:gad/core/services/auth_service.dart';
+import 'package:gad/core/services/employee_service.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -10,7 +12,9 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _staffIdController = TextEditingController();
+
   final AuthService _authService = AuthService();
+  final EmployeeService _employeeService = EmployeeService();
 
   @override
   void dispose() {
@@ -23,12 +27,24 @@ class _LoginScreenState extends State<LoginScreen> {
 
     if (staffId.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter your Staff ID')),
+        const SnackBar(content: Text('Please enter your ID')),
       );
       return;
     }
 
-    await _authService.login(staffId);
+    final employee = _employeeService.getEmployeeById(staffId);
+
+    if (employee == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Employee not found')),
+      );
+      return;
+    }
+
+    await _authService.login(
+      staffId: employee.id,
+      role: employee.role,
+    );
 
     if (!mounted) return;
 
@@ -56,14 +72,18 @@ class _LoginScreenState extends State<LoginScreen> {
 
     if (!mounted) return;
 
-    Navigator.pushReplacementNamed(context, '/staff');
+    if (employee.role == 'manager') {
+      Navigator.pushReplacementNamed(context, AppRouter.managerDashboard);
+    } else {
+      Navigator.pushReplacementNamed(context, AppRouter.staffDashboard);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Staff Login'),
+        title: const Text('Employee Login'),
       ),
       body: Padding(
         padding: const EdgeInsets.all(24),
@@ -73,28 +93,25 @@ class _LoginScreenState extends State<LoginScreen> {
             const SizedBox(height: 32),
             const Text(
               'Welcome',
-              style: TextStyle(
-                fontSize: 28,
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
             const Text(
-              'Enter your Staff ID to continue',
+              'Enter your Employee ID',
               style: TextStyle(color: Colors.grey),
             ),
             const SizedBox(height: 32),
             TextField(
               controller: _staffIdController,
               decoration: const InputDecoration(
-                labelText: 'Staff ID',
+                labelText: 'Employee ID',
                 border: OutlineInputBorder(),
               ),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 24),
             ElevatedButton(
               onPressed: _handleLogin,
-              child: const Text('Continue'),
+              child: const Text('Login'),
             ),
           ],
         ),
