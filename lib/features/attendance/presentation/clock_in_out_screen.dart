@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:gad/core/services/biometric_service.dart';
 import 'package:gad/shared/widgets/custom_button.dart';
@@ -18,18 +20,44 @@ class _ClockInOutScreenState extends State<ClockInOutScreen> {
   bool isClockedIn = false;
   String? inTime;
   String? outTime;
-  String breakTime = '1 hr';
+  String workDuration = '--';
 
   bool _busy = false;
   bool _loading = true;
+
+  late Timer _ticker;
+  DateTime _now = DateTime.now();
 
   @override
   void initState() {
     super.initState();
     _loadClockState();
+    _ticker = Timer.periodic(const Duration(minutes: 30), (_) {
+      _refreshLiveUi();
+    });
   }
 
-  Future<void> _loadClockState() async {
+  @override
+  void dispose() {
+    _ticker.cancel();
+    super.dispose();
+  }
+
+  Future<void> _refreshLiveUi() async {
+    setState(() {
+      _now = DateTime.now();
+    });
+
+    await _loadClockState(showLoader: false);
+  }
+
+  Future<void> _loadClockState({bool showLoader = true}) async {
+    if (showLoader && mounted) {
+      setState(() {
+        _loading = true;
+      });
+    }
+
     final state = await _service.getClockState();
 
     if (!mounted) return;
@@ -38,7 +66,9 @@ class _ClockInOutScreenState extends State<ClockInOutScreen> {
       isClockedIn = state['isClockedIn'] as bool? ?? false;
       inTime = state['inTime'] as String?;
       outTime = state['outTime'] as String?;
+      workDuration = state['workDuration'] as String? ?? '--';
       _loading = false;
+      _now = DateTime.now();
     });
   }
 
@@ -75,7 +105,7 @@ class _ClockInOutScreenState extends State<ClockInOutScreen> {
         ? await _service.clockOut(now)
         : await _service.clockIn(now);
 
-    await _loadClockState();
+    await _loadClockState(showLoader: false);
 
     if (!mounted) return;
 
@@ -111,7 +141,7 @@ class _ClockInOutScreenState extends State<ClockInOutScreen> {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      TimeOfDay.now().format(context),
+                      TimeOfDay.fromDateTime(_now).format(context),
                       style: const TextStyle(
                         fontSize: 48,
                         fontWeight: FontWeight.bold,
@@ -157,7 +187,7 @@ class _ClockInOutScreenState extends State<ClockInOutScreen> {
                     children: [
                       _infoColumn('In Time', inTime ?? '--:--'),
                       _infoColumn('Out Time', outTime ?? '--:--'),
-                      _infoColumn('Break', breakTime),
+                      _infoColumn('Work Duration', workDuration),
                     ],
                   ),
                 ],
@@ -189,11 +219,13 @@ class _ClockInOutScreenState extends State<ClockInOutScreen> {
         Text(
           label,
           style: const TextStyle(fontSize: 12, color: Colors.grey),
+          textAlign: TextAlign.center,
         ),
         const SizedBox(height: 4),
         Text(
           value,
           style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          textAlign: TextAlign.center,
         ),
       ],
     );

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:gad/core/services/attendance_service.dart';
 import 'package:gad/core/services/auth_service.dart';
 import 'package:gad/core/services/employee_service.dart';
 import 'package:gad/features/directory/domain/employee.dart';
@@ -13,9 +14,11 @@ class ProfileScreen extends StatefulWidget {
 class _ProfileScreenState extends State<ProfileScreen> {
   final AuthService _authService = AuthService();
   final EmployeeService _employeeService = EmployeeService();
+  final AttendanceService _attendanceService = AttendanceService();
 
   Employee? _employee;
   bool _loading = true;
+  String _averageWorkDuration = '--';
 
   @override
   void initState() {
@@ -25,6 +28,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Future<void> _loadProfile() async {
     final staffId = await _authService.getCurrentUser();
+    final averageWorkDuration =
+        await _attendanceService.getAverageWorkDurationText();
 
     if (staffId != null) {
       final employee = _employeeService.getEmployeeById(staffId);
@@ -33,10 +38,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
       setState(() {
         _employee = employee;
+        _averageWorkDuration = averageWorkDuration;
         _loading = false;
       });
     } else {
+      if (!mounted) return;
       setState(() {
+        _averageWorkDuration = averageWorkDuration;
         _loading = false;
       });
     }
@@ -92,6 +100,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           _infoTile("Department", _employee!.department),
           _infoTile("Position", _employee!.position),
           _infoTile("Role", _employee!.role),
+          _infoTile("Average Work Duration", _averageWorkDuration),
         ],
       ),
     );

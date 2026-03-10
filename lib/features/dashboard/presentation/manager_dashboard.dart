@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:gad/core/router/app_router.dart';
 import 'package:gad/core/services/appraisal_service.dart';
+import 'package:gad/core/services/attendance_service.dart';
 import 'package:gad/features/assessments/domain/appraisal_submission.dart';
 import 'package:gad/shared/widgets/app_card.dart';
 import 'package:gad/core/services/auth_service.dart';
@@ -14,22 +15,27 @@ class ManagerDashboard extends StatefulWidget {
 
 class _ManagerDashboardState extends State<ManagerDashboard> {
   final AppraisalService _service = AppraisalService();
+  final AttendanceService _attendanceService = AttendanceService();
 
   List<AppraisalSubmission> _submissions = [];
+  String _averageWorkDuration = '--';
 
   @override
   void initState() {
     super.initState();
-    _loadSubmissions();
+    _loadDashboard();
   }
 
-  Future<void> _loadSubmissions() async {
+  Future<void> _loadDashboard() async {
     final subs = await _service.getAllSubmissions();
+    final avgWorkDuration =
+        await _attendanceService.getAverageWorkDurationText();
 
     if (!mounted) return;
 
     setState(() {
       _submissions = subs;
+      _averageWorkDuration = avgWorkDuration;
     });
   }
 
@@ -73,7 +79,7 @@ class _ManagerDashboardState extends State<ManagerDashboard> {
         ],
       ),
       body: RefreshIndicator(
-        onRefresh: _loadSubmissions,
+        onRefresh: _loadDashboard,
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
@@ -100,6 +106,11 @@ class _ManagerDashboardState extends State<ManagerDashboard> {
                   label: 'Avg Score',
                   value: avgScore.toStringAsFixed(1),
                   change: '+0.0',
+                ),
+                _AnalyticsCard(
+                  label: 'Avg Work Duration',
+                  value: _averageWorkDuration,
+                  change: 'Daily',
                 ),
               ],
             ),

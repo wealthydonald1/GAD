@@ -20,13 +20,13 @@ class AppCard extends StatelessWidget {
         color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: Theme.of(context).dividerColor.withOpacity(0.15),
+          color: Theme.of(context).dividerColor.withValues(alpha: 0.15),
         ),
         boxShadow: [
           BoxShadow(
             blurRadius: 16,
             offset: const Offset(0, 6),
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withValues(alpha: 0.04),
           ),
         ],
       ),

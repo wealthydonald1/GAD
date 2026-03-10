@@ -8,10 +8,8 @@ class AttendanceProvider extends ChangeNotifier {
   AttendanceProvider(this._localService);
 
   TodayAttendanceState? _todayState;
-  bool _isLoading = false;
 
   TodayAttendanceState? get todayState => _todayState;
-  bool get isLoading => _isLoading;
 
   String get _todayKey {
     final now = DateTime.now();
@@ -21,35 +19,35 @@ class AttendanceProvider extends ChangeNotifier {
     return '$y-$m-$d';
   }
 
-  DateTime? get clockInTime => _todayState?.clockInIso != null
-      ? DateTime.tryParse(_todayState!.clockInIso!)
-      : null;
+  DateTime? get clockInTime {
+    if (_todayState?.clockInIso == null) return null;
+    return DateTime.tryParse(_todayState!.clockInIso!);
+  }
 
-  DateTime? get clockOutTime => _todayState?.clockOutIso != null
-      ? DateTime.tryParse(_todayState!.clockOutIso!)
-      : null;
+  DateTime? get clockOutTime {
+    if (_todayState?.clockOutIso == null) return null;
+    return DateTime.tryParse(_todayState!.clockOutIso!);
+  }
 
   bool get isClockedIn => clockInTime != null && clockOutTime == null;
-  bool get isClockedOut => clockInTime != null && clockOutTime != null;
+
+  bool get isClockedOut => clockOutTime != null;
 
   Future<void> load() async {
-    _isLoading = true;
-    notifyListeners();
-
     final saved = await _localService.loadTodayState();
     final todayKey = _todayKey;
 
     if (saved == null) {
       _todayState = TodayAttendanceState(dateKey: todayKey);
+      await _localService.saveTodayState(_todayState!);
     } else if (saved.dateKey != todayKey) {
-      // New day = fresh state
+      // NEW DAY → reset state
       _todayState = TodayAttendanceState(dateKey: todayKey);
       await _localService.saveTodayState(_todayState!);
     } else {
       _todayState = saved;
     }
 
-    _isLoading = false;
     notifyListeners();
   }
 
@@ -68,6 +66,7 @@ class AttendanceProvider extends ChangeNotifier {
     );
 
     await _localService.saveTodayState(_todayState!);
+
     notifyListeners();
   }
 
@@ -81,10 +80,11 @@ class AttendanceProvider extends ChangeNotifier {
     );
 
     await _localService.saveTodayState(_todayState!);
+
     notifyListeners();
   }
 
-  Future<void> forceDailyRefreshCheck() async {
+  Future<void> refreshDailyState() async {
     final todayKey = _todayKey;
 
     if (_todayState == null || _todayState!.dateKey != todayKey) {
