@@ -8,6 +8,7 @@ import 'package:gad/features/dashboard/presentation/manager_dashboard.dart';
 import 'package:gad/features/dashboard/presentation/staff_dashboard.dart';
 
 void main() {
+  WidgetsFlutterBinding.ensureInitialized();
   runApp(const MyApp());
 }
 
@@ -37,7 +38,6 @@ class _AuthGateState extends State<AuthGate> {
   final AuthService _authService = AuthService();
   final BiometricService _biometricService = BiometricService();
 
-  bool _loading = true;
   Widget _screen = const Scaffold(
     body: Center(child: CircularProgressIndicator()),
   );
@@ -49,62 +49,78 @@ class _AuthGateState extends State<AuthGate> {
   }
 
   Future<void> _decideStartScreen() async {
-    final loggedIn = await _authService.isLoggedIn();
+    try {
+      final loggedIn = await _authService.isLoggedIn();
 
-    if (!loggedIn) {
+      if (!loggedIn) {
+        if (!mounted) return;
+        setState(() {
+          _screen = const LoginScreen();
+        });
+        return;
+      }
+
+      final role = await _authService.getCurrentRole();
+
+      Widget targetScreen;
+      if (role == 'manager') {
+        targetScreen = const ManagerDashboard();
+      } else {
+        targetScreen = const StaffDashboard();
+      }
+
+      final biometricEnabled = await _authService.isBiometricEnabled();
+
+      if (!biometricEnabled) {
+        if (!mounted) return;
+        setState(() {
+          _screen = targetScreen;
+        });
+        return;
+      }
+
+      final pendingNextLaunch =
+          await _authService.isBiometricPendingNextLaunch();
+
+      if (pendingNextLaunch) {
+        await _authService.clearBiometricPendingNextLaunch();
+
+        if (!mounted) return;
+        setState(() {
+          _screen = targetScreen;
+        });
+        return;
+      }
+
+      final canCheck = await _biometricService.canCheck();
+
+      if (!canCheck) {
+        if (!mounted) return;
+        setState(() {
+          _screen = targetScreen;
+        });
+        return;
+      }
+
+      final ok = await _biometricService.authenticate(
+        reason: 'Authenticate to continue to your dashboard',
+      );
+
+      if (!mounted) return;
+
+      setState(() {
+        _screen = ok ? targetScreen : const LoginScreen();
+      });
+    } catch (_) {
       if (!mounted) return;
       setState(() {
         _screen = const LoginScreen();
-        _loading = false;
       });
-      return;
     }
-
-    final role = await _authService.getCurrentRole();
-    final biometricEnabled = await _authService.isBiometricEnabled();
-
-    Widget targetScreen;
-    if (role == 'manager') {
-      targetScreen = const ManagerDashboard();
-    } else {
-      targetScreen = const StaffDashboard();
-    }
-
-    if (!biometricEnabled) {
-      if (!mounted) return;
-      setState(() {
-        _screen = targetScreen;
-        _loading = false;
-      });
-      return;
-    }
-
-    final canCheck = await _biometricService.canCheck();
-
-    if (!canCheck) {
-      if (!mounted) return;
-      setState(() {
-        _screen = targetScreen;
-        _loading = false;
-      });
-      return;
-    }
-
-    final ok = await _biometricService.authenticate(
-      reason: 'Authenticate to continue to your dashboard',
-    );
-
-    if (!mounted) return;
-
-    setState(() {
-      _screen = ok ? targetScreen : const LoginScreen();
-      _loading = false;
-    });
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_loading) return _screen;
     return _screen;
   }
 }

@@ -1,52 +1,98 @@
 import 'package:flutter/material.dart';
+import 'package:gad/core/services/auth_service.dart';
+import 'package:gad/core/services/employee_service.dart';
+import 'package:gad/features/directory/domain/employee.dart';
 
-class ProfileScreen extends StatelessWidget {
-  final dynamic employeeId;
-  const ProfileScreen({Key? key, this.employeeId}) : super(key: key);
+class ProfileScreen extends StatefulWidget {
+  const ProfileScreen({super.key});
+
+  @override
+  State<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends State<ProfileScreen> {
+  final AuthService _authService = AuthService();
+  final EmployeeService _employeeService = EmployeeService();
+
+  Employee? _employee;
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadProfile();
+  }
+
+  Future<void> _loadProfile() async {
+    final staffId = await _authService.getCurrentUser();
+
+    if (staffId != null) {
+      final employee = _employeeService.getEmployeeById(staffId);
+
+      if (!mounted) return;
+
+      setState(() {
+        _employee = employee;
+        _loading = false;
+      });
+    } else {
+      setState(() {
+        _loading = false;
+      });
+    }
+  }
+
+  Widget _infoTile(String label, String value) {
+    return Card(
+      child: ListTile(
+        title: Text(label),
+        subtitle: Text(value),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
-    // Mock data based on ID
-    final name = employeeId == 0 ? 'Devika Mehta' : 'Lewis Clark';
-    final role = employeeId == 0 ? 'Sr. Customer Manager' : 'Software Engineer';
+    if (_loading) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
 
-    return DefaultTabController(
-      length: 3,
-      child: Scaffold(
-        appBar: AppBar(
-          title: Text(name),
-          bottom: const TabBar(
-            tabs: [
-              Tab(text: 'Profile'),
-              Tab(text: 'Attendance'),
-              Tab(text: 'Appraisals'),
-            ],
+    if (_employee == null) {
+      return const Scaffold(
+        body: Center(child: Text('Profile not found')),
+      );
+    }
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Profile'),
+      ),
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          const Icon(
+            Icons.account_circle,
+            size: 100,
+            color: Colors.grey,
           ),
-        ),
-        body: TabBarView(
-          children: [
-            // Profile Tab
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                children: [
-                  const CircleAvatar(radius: 40, child: Icon(Icons.person, size: 40)),
-                  const SizedBox(height: 16),
-                  Text(name, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                  Text(role),
-                  const Divider(height: 32),
-                  ListTile(title: const Text('Employee Code'), trailing: Text('NAF2456')),
-                  ListTile(title: const Text('Email'), trailing: Text('devika@example.com')),
-                  ListTile(title: const Text('Reporting Manager'), trailing: Text('Mr. Mohit Rana')),
-                ],
+          const SizedBox(height: 16),
+          Center(
+            child: Text(
+              _employee!.name,
+              style: const TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
               ),
             ),
-            // Attendance Tab
-            const Center(child: Text('Attendance history will appear here')),
-            // Appraisals Tab
-            const Center(child: Text('Past appraisals will appear here')),
-          ],
-        ),
+          ),
+          const SizedBox(height: 24),
+          _infoTile("Staff ID", _employee!.id),
+          _infoTile("Department", _employee!.department),
+          _infoTile("Position", _employee!.position),
+          _infoTile("Role", _employee!.role),
+        ],
       ),
     );
   }

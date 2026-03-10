@@ -16,6 +16,7 @@ import 'package:gad/features/assessments/presentation/manager_review_screen.dart
 
 import 'package:gad/features/directory/presentation/directory_list_screen.dart';
 import 'package:gad/features/directory/presentation/profile_screen.dart';
+
 import 'package:gad/features/assessments/domain/appraisal_submission.dart';
 
 class AppRouter {
@@ -31,69 +32,60 @@ class AppRouter {
   static const String assessments = '/assessments';
   static const String appraisalForm = '/assessments/form';
   static const String results = '/assessments/results';
+  static const String managerReview = '/manager/review';
 
   static const String directory = '/directory';
   static const String profile = '/profile';
 
-  static const String managerReview = '/manager-review';
-
   static Route<dynamic> generateRoute(RouteSettings settings) {
-    debugPrint('Route: ${settings.name}');
+    debugPrint('Route: ${settings.name}, args: ${settings.arguments}');
 
     switch (settings.name) {
+      case '/':
+        return MaterialPageRoute(builder: (_) => const StaffDashboard());
+
       case login:
-        return MaterialPageRoute(
-          builder: (_) => const LoginScreen(),
-        );
+        return MaterialPageRoute(builder: (_) => const LoginScreen());
 
       case forgotPassword:
-        return MaterialPageRoute(
-          builder: (_) => const ForgotPasswordScreen(),
-        );
+        return MaterialPageRoute(builder: (_) => const ForgotPasswordScreen());
 
       case staffDashboard:
-        return MaterialPageRoute(
-          builder: (_) => const StaffDashboard(),
-        );
+        return MaterialPageRoute(builder: (_) => const StaffDashboard());
 
       case managerDashboard:
-        return MaterialPageRoute(
-          builder: (_) => const ManagerDashboard(),
-        );
+        return MaterialPageRoute(builder: (_) => const ManagerDashboard());
 
       case attendance:
-        return MaterialPageRoute(
-          builder: (_) => const ClockInOutScreen(),
-        );
+        return MaterialPageRoute(builder: (_) => const ClockInOutScreen());
 
       case attendanceHistory:
-        return MaterialPageRoute(
-          builder: (_) => const HistoryScreen(),
-        );
+        return MaterialPageRoute(builder: (_) => const HistoryScreen());
 
       case assessments:
-        return MaterialPageRoute(
-          builder: (_) => const CyclesListScreen(),
-        );
+        return MaterialPageRoute(builder: (_) => const CyclesListScreen());
 
       case appraisalForm:
+        final args = settings.arguments as Map<String, dynamic>?;
         return MaterialPageRoute(
           builder: (_) => AppraisalFormScreen(
-            cycleId: settings.arguments,
+            cycleId: args?['cycleId'],
           ),
         );
 
       case results:
+        final args = settings.arguments as Map<String, dynamic>?;
         return MaterialPageRoute(
           builder: (_) => ResultsViewScreen(
-            resultId: settings.arguments,
+            resultId: args?['resultId'],
           ),
         );
 
       case managerReview:
+        final submission = settings.arguments as AppraisalSubmission?;
         return MaterialPageRoute(
           builder: (_) => ManagerReviewScreen(
-            submission: settings.arguments as AppraisalSubmission?,
+            submission: submission,
           ),
         );
 
@@ -104,9 +96,7 @@ class AppRouter {
 
       case profile:
         return MaterialPageRoute(
-          builder: (_) => ProfileScreen(
-            employeeId: settings.arguments,
-          ),
+          builder: (_) => const ProfileScreen(),
         );
 
       default:

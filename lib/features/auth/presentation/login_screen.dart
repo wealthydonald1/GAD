@@ -16,6 +16,8 @@ class _LoginScreenState extends State<LoginScreen> {
   final AuthService _authService = AuthService();
   final EmployeeService _employeeService = EmployeeService();
 
+  bool _isSubmitting = false;
+
   @override
   void dispose() {
     _staffIdController.dispose();
@@ -23,6 +25,8 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _handleLogin() async {
+    if (_isSubmitting) return;
+
     final staffId = _staffIdController.text.trim();
 
     if (staffId.isEmpty) {
@@ -32,50 +36,78 @@ class _LoginScreenState extends State<LoginScreen> {
       return;
     }
 
-    final employee = _employeeService.getEmployeeById(staffId);
+    setState(() {
+      _isSubmitting = true;
+    });
 
-    if (employee == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Employee not found')),
+    try {
+      final employee = _employeeService.getEmployeeById(staffId);
+
+      if (employee == null) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Employee not found')),
+        );
+        return;
+      }
+
+      await _authService.login(
+        staffId: employee.id,
+        role: employee.role,
       );
-      return;
-    }
 
-    await _authService.login(
-      staffId: employee.id,
-      role: employee.role,
-    );
+      if (!mounted) return;
 
-    if (!mounted) return;
+      final alreadyEnabled = await _authService.isBiometricEnabled();
 
-    final enableBiometric = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Enable Biometric Login?'),
-        content: const Text(
-          'Use fingerprint or face login automatically on this device next time?',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Not now'),
+      bool enableBiometric = alreadyEnabled;
+
+      if (!alreadyEnabled) {
+        final choice = await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Enable Biometric Login?'),
+            content: const Text(
+              'Use fingerprint or face login automatically on this device next time?',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Not now'),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(context, true),
+                child: const Text('Enable'),
+              ),
+            ],
           ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Enable'),
-          ),
-        ],
-      ),
-    );
+        );
 
-    await _authService.setBiometricEnabled(enableBiometric ?? false);
+        enableBiometric = choice ?? false;
+      }
 
-    if (!mounted) return;
+      if (enableBiometric) {
+        await _authService.setBiometricEnabled(true);
 
-    if (employee.role == 'manager') {
-      Navigator.pushReplacementNamed(context, AppRouter.managerDashboard);
-    } else {
-      Navigator.pushReplacementNamed(context, AppRouter.staffDashboard);
+        // Important:
+        // Do not trigger biometric immediately after enabling.
+        // Only activate it from the next app launch flow.
+        await _authService.setBiometricPendingNextLaunch(true);
+      }
+
+      if (!mounted) return;
+
+      if (employee.role == 'manager') {
+        Navigator.pushReplacementNamed(context, AppRouter.managerDashboard);
+      } else {
+        Navigator.pushReplacementNamed(context, AppRouter.staffDashboard);
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSubmitting = false;
+        });
+      }
     }
   }
 
@@ -110,8 +142,14 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
             const SizedBox(height: 24),
             ElevatedButton(
-              onPressed: _handleLogin,
-              child: const Text('Login'),
+              onPressed: _isSubmitting ? null : _handleLogin,
+              child: _isSubmitting
+                  ? const SizedBox(
+                      height: 18,
+                      width: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Text('Login'),
             ),
           ],
         ),
