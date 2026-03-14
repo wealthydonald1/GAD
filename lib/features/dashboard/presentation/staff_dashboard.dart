@@ -61,10 +61,7 @@ class StaffDashboard extends StatelessWidget {
                 ),
                 ElevatedButton(
                   onPressed: () {
-                    Navigator.pushNamed(
-                      context,
-                      AppRouter.attendance,
-                    );
+                    Navigator.pushNamed(context, AppRouter.attendance);
                   },
                   child: const Text('Open'),
                 ),
@@ -95,10 +92,7 @@ class StaffDashboard extends StatelessWidget {
               subtitle: const Text('Open appraisal cycles'),
               trailing: const Icon(Icons.arrow_forward_ios),
               onTap: () {
-                Navigator.pushNamed(
-                  context,
-                  AppRouter.assessments,
-                );
+                Navigator.pushNamed(context, AppRouter.assessments);
               },
             ),
           ),
@@ -110,10 +104,31 @@ class StaffDashboard extends StatelessWidget {
               subtitle: const Text('View past attendance records'),
               trailing: const Icon(Icons.arrow_forward_ios),
               onTap: () {
-                Navigator.pushNamed(
-                  context,
-                  AppRouter.attendanceHistory,
-                );
+                Navigator.pushNamed(context, AppRouter.attendanceHistory);
+              },
+            ),
+          ),
+          const SizedBox(height: 12),
+          AppCard(
+            child: ListTile(
+              leading: const Icon(Icons.event_note),
+              title: const Text('Request Leave'),
+              subtitle: const Text('Submit a leave request'),
+              trailing: const Icon(Icons.arrow_forward_ios),
+              onTap: () {
+                Navigator.pushNamed(context, AppRouter.leaveRequest);
+              },
+            ),
+          ),
+          const SizedBox(height: 12),
+          AppCard(
+            child: ListTile(
+              leading: const Icon(Icons.list_alt),
+              title: const Text('My Leave Requests'),
+              subtitle: const Text('View leave request history'),
+              trailing: const Icon(Icons.arrow_forward_ios),
+              onTap: () {
+                Navigator.pushNamed(context, AppRouter.leaveHistory);
               },
             ),
           ),

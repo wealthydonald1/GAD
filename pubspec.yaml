@@ -14,6 +14,7 @@ dependencies:
 
   # UI
   percent_indicator: ^4.2.3
+  http: ^1.6.0
   # For biometrics (add later)
   # local_auth: ^2.1.6
 

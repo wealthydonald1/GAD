@@ -14,6 +14,10 @@ class _HistoryScreenState extends State<HistoryScreen> {
   List<AttendanceRecord> _history = [];
   bool _loading = true;
 
+  String _weeklyTotal = '--';
+  String _weeklyAverage = '--';
+  int _weeklyDaysPresent = 0;
+
   @override
   void initState() {
     super.initState();
@@ -22,11 +26,15 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
   Future<void> _load() async {
     final data = await _service.getHistory();
+    final summary = await _service.getWeeklySummary();
 
     if (!mounted) return;
 
     setState(() {
       _history = data.reversed.toList();
+      _weeklyTotal = summary['totalText'] as String? ?? '--';
+      _weeklyAverage = summary['averageText'] as String? ?? '--';
+      _weeklyDaysPresent = summary['daysPresent'] as int? ?? 0;
       _loading = false;
     });
   }
@@ -43,13 +51,58 @@ class _HistoryScreenState extends State<HistoryScreen> {
                   onRefresh: _load,
                   child: ListView.separated(
                     padding: const EdgeInsets.all(16),
-                    itemCount: _history.length,
+                    itemCount: _history.length + 1,
                     separatorBuilder: (_, __) => const SizedBox(height: 12),
                     itemBuilder: (context, index) {
-                      final record = _history[index];
+                      if (index == 0) {
+                        return Card(
+                          elevation: 2,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'This Week',
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: _miniInfo(
+                                          'Total Hours', _weeklyTotal),
+                                    ),
+                                    Expanded(
+                                      child:
+                                          _miniInfo('Average', _weeklyAverage),
+                                    ),
+                                    Expanded(
+                                      child: _miniInfo(
+                                        'Days Present',
+                                        _weeklyDaysPresent.toString(),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      }
+
+                      final record = _history[index - 1];
                       final duration =
                           _service.getRecordWorkDurationText(record);
+                      final status = _service.getRecordStatusText(record);
                       final isComplete = record.clockOut != '--:--';
+                      final isLate = _service.isRecordLate(record);
 
                       return Card(
                         elevation: 2,
@@ -85,19 +138,23 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                       vertical: 4,
                                     ),
                                     decoration: BoxDecoration(
-                                      color: isComplete
-                                          ? Colors.green.shade100
-                                          : Colors.orange.shade100,
+                                      color: isLate
+                                          ? Colors.red.shade100
+                                          : (isComplete
+                                              ? Colors.green.shade100
+                                              : Colors.orange.shade100),
                                       borderRadius: BorderRadius.circular(20),
                                     ),
                                     child: Text(
-                                      isComplete ? 'Completed' : 'Incomplete',
+                                      status,
                                       style: TextStyle(
                                         fontSize: 12,
                                         fontWeight: FontWeight.w600,
-                                        color: isComplete
-                                            ? Colors.green.shade800
-                                            : Colors.orange.shade800,
+                                        color: isLate
+                                            ? Colors.red.shade800
+                                            : (isComplete
+                                                ? Colors.green.shade800
+                                                : Colors.orange.shade800),
                                       ),
                                     ),
                                   ),
@@ -105,8 +162,6 @@ class _HistoryScreenState extends State<HistoryScreen> {
                               ),
                               const SizedBox(height: 12),
                               Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
                                 children: [
                                   Expanded(
                                     child:
@@ -117,10 +172,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                         _miniInfo('Clock Out', record.clockOut),
                                   ),
                                   Expanded(
-                                    child: _miniInfo(
-                                      'Work Duration',
-                                      duration,
-                                    ),
+                                    child: _miniInfo('Work Duration', duration),
                                   ),
                                 ],
                               ),

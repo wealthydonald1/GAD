@@ -51,7 +51,7 @@ class CyclesListScreen extends StatelessWidget {
                 } else {
                   Navigator.pushNamed(
                     context,
-                    AppRouter.results,
+                    AppRouter.resultsView,
                     arguments: {'resultId': cycle.id},
                   );
                 }

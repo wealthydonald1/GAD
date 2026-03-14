@@ -2,9 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:gad/core/router/app_router.dart';
 import 'package:gad/core/services/appraisal_service.dart';
 import 'package:gad/core/services/attendance_service.dart';
+import 'package:gad/core/services/auth_service.dart';
+import 'package:gad/core/services/leave_service.dart';
 import 'package:gad/features/assessments/domain/appraisal_submission.dart';
 import 'package:gad/shared/widgets/app_card.dart';
-import 'package:gad/core/services/auth_service.dart';
+// IMPORT the new screen here
+import 'manager_weekend_approval_screen.dart';
 
 class ManagerDashboard extends StatefulWidget {
   const ManagerDashboard({super.key});
@@ -16,9 +19,16 @@ class ManagerDashboard extends StatefulWidget {
 class _ManagerDashboardState extends State<ManagerDashboard> {
   final AppraisalService _service = AppraisalService();
   final AttendanceService _attendanceService = AttendanceService();
+  final LeaveService _leaveService = LeaveService();
 
   List<AppraisalSubmission> _submissions = [];
   String _averageWorkDuration = '--';
+
+  int _presentToday = 0;
+  int _lateToday = 0;
+  int _absentToday = 0;
+  int _onLeaveToday = 0;
+  String _avgWorkDurationToday = '--';
 
   @override
   void initState() {
@@ -30,12 +40,19 @@ class _ManagerDashboardState extends State<ManagerDashboard> {
     final subs = await _service.getAllSubmissions();
     final avgWorkDuration =
         await _attendanceService.getAverageWorkDurationText();
+    final attendance = await _attendanceService.getAttendanceAnalytics();
+    final onLeaveToday = await _leaveService.getApprovedLeaveCountToday();
 
     if (!mounted) return;
 
     setState(() {
       _submissions = subs;
       _averageWorkDuration = avgWorkDuration;
+      _presentToday = attendance['present'] as int? ?? 0;
+      _lateToday = attendance['late'] as int? ?? 0;
+      _absentToday = attendance['absent'] as int? ?? 0;
+      _avgWorkDurationToday = attendance['averageWork'] as String? ?? '--';
+      _onLeaveToday = onLeaveToday;
     });
   }
 
@@ -43,6 +60,8 @@ class _ManagerDashboardState extends State<ManagerDashboard> {
   Widget build(BuildContext context) {
     final totalEmployees = _submissions.length;
     final pendingReviews = _submissions.where((s) => s.submitted).length;
+
+    // Safety check for empty list to prevent division by zero
     final avgScore = _submissions.isEmpty
         ? 0.0
         : _submissions
@@ -56,25 +75,7 @@ class _ManagerDashboardState extends State<ManagerDashboard> {
       appBar: AppBar(
         title: const Text('Manager Dashboard'),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.date_range),
-            onPressed: () {},
-          ),
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: () async {
-              final auth = AuthService();
-              await auth.logout();
-
-              if (!context.mounted) return;
-
-              Navigator.pushNamedAndRemoveUntil(
-                context,
-                AppRouter.login,
-                (route) => false,
-              );
-            },
-          ),
+          IconButton(icon: const Icon(Icons.logout), onPressed: _handleLogout),
           const SizedBox(width: 8),
         ],
       ),
@@ -83,42 +84,89 @@ class _ManagerDashboardState extends State<ManagerDashboard> {
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
+            const Text('Attendance Today',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
             Wrap(
               spacing: 12,
               runSpacing: 12,
               children: [
                 _AnalyticsCard(
-                  label: 'Total Employees',
-                  value: '$totalEmployees',
-                  change: '+0',
-                ),
-                const _AnalyticsCard(
-                  label: 'On Leave',
-                  value: '0',
-                  change: '0',
-                ),
+                    label: 'Present', value: '$_presentToday', change: ''),
+                _AnalyticsCard(label: 'Late', value: '$_lateToday', change: ''),
                 _AnalyticsCard(
-                  label: 'Pending Reviews',
-                  value: '$pendingReviews',
-                  change: '+0',
-                ),
+                    label: 'Absent', value: '$_absentToday', change: ''),
                 _AnalyticsCard(
-                  label: 'Avg Score',
-                  value: avgScore.toStringAsFixed(1),
-                  change: '+0.0',
-                ),
-                _AnalyticsCard(
-                  label: 'Avg Work Duration',
-                  value: _averageWorkDuration,
-                  change: 'Daily',
-                ),
+                    label: 'Avg Work',
+                    value: _avgWorkDurationToday,
+                    change: ''),
               ],
             ),
             const SizedBox(height: 24),
-            const Text(
-              'Staff Overview',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+
+            // MANAGEMENT SECTION
+            const Text('Operations',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            AppCard(
+              child: Column(
+                children: [
+                  ListTile(
+                    leading: const Icon(Icons.event_note, color: Colors.blue),
+                    title: const Text('Leave Requests'),
+                    subtitle: const Text('Review staff leave applications'),
+                    trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                    onTap: () => Navigator.pushNamed(
+                        context, AppRouter.managerLeaveRequests),
+                  ),
+                  const Divider(height: 1),
+                  ListTile(
+                    leading:
+                        const Icon(Icons.calendar_month, color: Colors.orange),
+                    title: const Text('Weekend Permissions'),
+                    subtitle: const Text('Manage weekend clock-in access'),
+                    trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (context) =>
+                                const ManagerWeekendApprovalScreen()),
+                      );
+                    },
+                  ),
+                ],
+              ),
             ),
+
+            const SizedBox(height: 24),
+            const Text('Performance Overview',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 12,
+              runSpacing: 12,
+              children: [
+                _AnalyticsCard(
+                    label: 'Total Employees',
+                    value: '$totalEmployees',
+                    change: ''),
+                _AnalyticsCard(
+                    label: 'On Leave', value: '$_onLeaveToday', change: ''),
+                _AnalyticsCard(
+                    label: 'Pending Reviews',
+                    value: '$pendingReviews',
+                    change: ''),
+                _AnalyticsCard(
+                    label: 'Avg Score',
+                    value: avgScore.toStringAsFixed(1),
+                    change: ''),
+              ],
+            ),
+
+            const SizedBox(height: 24),
+            const Text('Staff Overview',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
             Card(
               child: Padding(
@@ -129,18 +177,11 @@ class _ManagerDashboardState extends State<ManagerDashboard> {
                     const Divider(),
                     if (_submissions.isEmpty)
                       const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 24),
-                        child: Text('No submissions yet'),
-                      )
+                          padding: EdgeInsets.symmetric(vertical: 24),
+                          child: Text('No submissions yet'))
                     else
-                      ..._submissions.map((submission) {
-                        return _buildTableRow(
-                          context,
-                          submission.staffId,
-                          submission.submitted ? 'Submitted' : 'Draft',
-                          submission,
-                        );
-                      }),
+                      ..._submissions.map((s) => _buildTableRow(context,
+                          s.staffId, s.submitted ? 'Submitted' : 'Draft', s)),
                   ],
                 ),
               ),
@@ -151,59 +192,49 @@ class _ManagerDashboardState extends State<ManagerDashboard> {
     );
   }
 
+  Future<void> _handleLogout() async {
+    final auth = AuthService();
+    await auth.logout();
+    if (!mounted) return;
+    Navigator.pushNamedAndRemoveUntil(
+        context, AppRouter.login, (route) => false);
+  }
+
   Widget _buildTableHeader() {
     return const Row(
       children: [
         Expanded(
-          child: Text(
-            'Employee',
-            style: TextStyle(fontWeight: FontWeight.bold),
-          ),
-        ),
+            child: Text('Employee',
+                style: TextStyle(fontWeight: FontWeight.bold))),
         Expanded(
-          child: Text(
-            'Status',
-            style: TextStyle(fontWeight: FontWeight.bold),
-          ),
-        ),
+            child:
+                Text('Status', style: TextStyle(fontWeight: FontWeight.bold))),
         Expanded(
-          child: Text(
-            'Action',
-            style: TextStyle(fontWeight: FontWeight.bold),
-          ),
-        ),
+            child:
+                Text('Action', style: TextStyle(fontWeight: FontWeight.bold))),
       ],
     );
   }
 
-  Widget _buildTableRow(
-    BuildContext context,
-    String name,
-    String status,
-    AppraisalSubmission submission,
-  ) {
+  Widget _buildTableRow(BuildContext context, String name, String status,
+      AppraisalSubmission submission) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
         children: [
           Expanded(child: Text(name)),
           Expanded(
-            child: Chip(
-              label: Text(status),
-              backgroundColor: status == 'Submitted'
-                  ? Colors.green[100]
-                  : Colors.orange[100],
-            ),
+            child: Text(status,
+                style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color:
+                        status == 'Submitted' ? Colors.green : Colors.orange)),
           ),
           Expanded(
             child: ElevatedButton(
-              onPressed: () {
-                Navigator.pushNamed(
-                  context,
-                  AppRouter.managerReview,
-                  arguments: submission,
-                );
-              },
+              onPressed: () => Navigator.pushNamed(
+                  context, AppRouter.managerReview,
+                  arguments: submission),
               child: const Text('Review'),
             ),
           ),
@@ -218,11 +249,8 @@ class _AnalyticsCard extends StatelessWidget {
   final String value;
   final String change;
 
-  const _AnalyticsCard({
-    required this.label,
-    required this.value,
-    required this.change,
-  });
+  const _AnalyticsCard(
+      {required this.label, required this.value, required this.change});
 
   @override
   Widget build(BuildContext context) {
@@ -232,24 +260,12 @@ class _AnalyticsCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(label, style: const TextStyle(color: Colors.grey)),
+            Text(label,
+                style: const TextStyle(color: Colors.grey, fontSize: 12)),
             const SizedBox(height: 4),
-            Text(
-              value,
-              style: const TextStyle(
-                fontSize: 28,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              change,
-              style: TextStyle(
-                color: change.startsWith('+')
-                    ? Colors.green
-                    : (change.startsWith('-') ? Colors.red : Colors.grey),
-              ),
-            ),
+            Text(value,
+                style:
+                    const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
           ],
         ),
       ),
